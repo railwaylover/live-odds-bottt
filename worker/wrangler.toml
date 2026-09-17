@@ -1,0 +1,24 @@
+# Live Odds Bot — Cloudflare Worker deployment.
+# Secrets (TELEGRAM_BOT_TOKEN, WEBHOOK_SECRET) are set via
+# `wrangler secret put`, never stored here. See worker/README.md.
+
+name = "live-odds-bot"
+main = "src/index.ts"
+compatibility_date = "2025-06-20"
+
+[vars]
+AUTHORIZED_CHAT_IDS = "6437188126,7009182332"
+OBVIOUS_EDGE = "0.06"
+VALUE_EDGE = "0.025"
+STAKE_CAP_OBVIOUS = "2.0"
+STAKE_CAP_VALUE = "1.0"
+MIN_VOLUME = "100"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "live-odds-bot"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/2 * * * *"]

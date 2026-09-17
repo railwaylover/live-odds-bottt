@@ -7,3 +7,7 @@ data/*.db
 data/*.db-*
 *.log
 .pytest_cache/
+worker/node_modules/
+worker/.wrangler/
+worker/dist-test/
+worker/.dev.vars
