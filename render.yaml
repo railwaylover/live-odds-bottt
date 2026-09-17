@@ -1,0 +1,11 @@
+services:
+  - type: worker
+    name: live-odds-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m bot.main
+    envVars:
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: AUTHORIZED_CHAT_IDS
+        sync: false
