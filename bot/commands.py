@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 
 from . import config
 from .analysis import markets as catalog
-from .notify import format_record, format_stats
+from .notify import format_record, format_stats, format_status
 from .store import Store
 
 REFUSAL = "⛔ This bot is private."
@@ -16,18 +16,18 @@ def _authorized(chat_id: str | int) -> bool:
     return str(chat_id) in config.AUTHORIZED_CHAT_IDS
 
 
-async def _gate(update: Update) -> Store | None:
+async def _gate(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> Store | None:
     chat_id = update.effective_chat.id
     if not _authorized(chat_id):
         await update.message.reply_text(REFUSAL)
         return None
-    store: Store = update.effective_message.bot_data["store"]
+    store: Store = ctx.application.bot_data["store"]
     store.ensure_subscription(str(chat_id))
     return store
 
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     await update.message.reply_text(
@@ -37,13 +37,14 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     await update.message.reply_text(
         "/opportunities — current open picks\n"
         "/stats [YYYY-MM-DD] — daily won/lost table\n"
         "/record — all-time tally\n"
+        "/status — live status: open picks + won/lost right now\n"
         "/coverage — monitored markets + gaps\n"
         "/subscribe [obvious|value|all] — enable alerts\n"
         "/unsubscribe — disable push alerts\n"
@@ -52,7 +53,7 @@ async def help_cmd(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def opportunities(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
     from .notify import TIER_EMOJI
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     open_picks = store.get_open()
@@ -68,7 +69,7 @@ async def opportunities(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     day = ctx.args[0] if ctx.args else None
@@ -76,14 +77,24 @@ async def stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def record(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     await update.message.reply_text(format_record(store.record_alltime()))
 
 
+async def status(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
+    """Live snapshot: open picks right now + today's won/lost tally."""
+    store = await _gate(update, ctx)
+    if not store:
+        return
+    report = store.stats_for_day()
+    await update.message.reply_text(
+        format_status(store.get_open(), report["counts"], report["day"]))
+
+
 async def coverage(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     lines = ["🗂 Monitored markets:"]
@@ -97,7 +108,7 @@ async def coverage(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def subscribe(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     arg = (ctx.args[0] if ctx.args else "all").lower()
@@ -107,7 +118,7 @@ async def subscribe(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def unsubscribe(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     store.set_subscription(str(update.effective_chat.id), subscribed=0)
@@ -115,7 +126,7 @@ async def unsubscribe(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def settings(update: Update, ctx: ContextTypes.DEFAULT_TYPE) -> None:
-    store = await _gate(update)
+    store = await _gate(update, ctx)
     if not store:
         return
     sub = store.get_subscription(str(update.effective_chat.id))

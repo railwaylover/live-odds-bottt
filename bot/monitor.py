@@ -12,7 +12,7 @@ from .feeds.base import LiveEvent, Source
 from .feeds.espn import EspnSource
 from .feeds.kalshi import KalshiSource
 from .feeds.polymarket import PolymarketSource
-from .notify import format_alert, in_quiet_hours, send_with_backoff
+from .notify import format_alert, format_result, in_quiet_hours, send_with_backoff
 from .settle import settle
 from .store import Store
 
@@ -146,12 +146,19 @@ async def run_cycle(store: Store, bot=None) -> dict:
             stats["alerted"] += 1
             if bot is not None:
                 await dispatch(store, bot, sel)
-    await settle_open(store)
+    if bot is not None:
+        stats["settled"] = await settle_open(store, bot)
+    else:
+        stats["settled"] = await settle_open(store)
     return stats
 
 
-async def settle_open(store: Store) -> int:
-    """Settle open picks from one batched ESPN finals pass. Returns count."""
+async def settle_open(store: Store, bot=None) -> int:
+    """Settle open picks from one batched ESPN finals pass.
+
+    Every newly settled pick is pushed live to its tier subscribers, so the
+    running won/lost tally reaches chats without asking. Returns count.
+    """
     espn = next((s for s in SOURCES if s.name == "espn"), None)
     if espn is None or not hasattr(espn, "fetch_finals"):
         return 0
@@ -169,7 +176,18 @@ async def settle_open(store: Store) -> int:
         if outcome in ("won", "lost", "void"):
             store.settle(sel["id"], outcome)
             settled += 1
+            if bot is not None:
+                await dispatch_result(store, bot, {**sel, "status": outcome})
     return settled
+
+
+async def dispatch_result(store: Store, bot, sel: dict) -> None:
+    """Push a live won/lost/void update for a settled pick."""
+    text = format_result(sel)
+    for sub in store.subscribers_for_tier(sel["tier"]):
+        chat_id = sub["chat_id"]
+        ok = await send_with_backoff(bot, chat_id, text)
+        store.record_alert(sel["id"], chat_id, state="sent" if ok else "failed")
 
 
 async def dispatch(store: Store, bot, sel: dict) -> None:

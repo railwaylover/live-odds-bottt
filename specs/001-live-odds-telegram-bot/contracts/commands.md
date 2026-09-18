@@ -12,6 +12,7 @@
 | `/subscribe` | `[obvious\|value\|all]` | Enables push alerts (default all) |
 | `/unsubscribe` | — | Disables push alerts; pull commands still work |
 | `/settings` | — | Shows tiers, quiet hours; sub-actions to change them |
+| `/status` | — | Live snapshot: open picks right now + today's settled won/lost tally |
 | `/coverage` | — | Monitored market catalog per sport + declared gaps |
 
 Unauthorized chats receive a refusal message for every command.
@@ -28,6 +29,17 @@ Invalid if: <condition>
 
 Value tier uses 🟡 and identical fields. No alert may omit thesis or
 invalidation.
+
+## Settlement push format
+
+Every newly settled pick is pushed live to its tier subscribers:
+
+```text
+✅ Bet WON 🟢
+Arsenal vs Chelsea — Over 2.5: over @ 2.10
+```
+
+Variants: `❌ Bet LOST`, `➖ Bet VOID`. Same match/market/odds fields.
 
 ## Feed interface (internal)
 

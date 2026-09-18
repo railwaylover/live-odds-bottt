@@ -37,6 +37,7 @@ def build_app(store: Store | None = None):
     app.add_handler(CommandHandler("opportunities", commands.opportunities))
     app.add_handler(CommandHandler("stats", commands.stats))
     app.add_handler(CommandHandler("record", commands.record))
+    app.add_handler(CommandHandler("status", commands.status))
     app.add_handler(CommandHandler("coverage", commands.coverage))
     app.add_handler(CommandHandler("subscribe", commands.subscribe))
     app.add_handler(CommandHandler("unsubscribe", commands.unsubscribe))

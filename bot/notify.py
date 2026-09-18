@@ -73,3 +73,33 @@ def format_record(rows: list[dict]) -> str:
     for r in rows:
         lines.append(f"{r['tier']}: {r['status']} × {r['count']}")
     return "\n".join(lines)
+
+
+def format_status(open_picks: list[dict], day_counts: dict, day: str) -> str:
+    """Live snapshot: open picks right now + today's settled tally."""
+    lines = [f"📡 Live status — {day} (Asia/Tehran)"]
+    lines.append(f"🔵 Open picks: {len(open_picks)}")
+    for sel in open_picks[:10]:
+        badge = TIER_EMOJI.get(sel["tier"], "⚪")
+        lines.append(f"  {badge} {sel['match_label']} — {sel['market_type']}: "
+                     f"{sel['outcome']} @ {sel['odds_decimal']}")
+    if len(open_picks) > 10:
+        lines.append(f"  …and {len(open_picks) - 10} more (see /opportunities)")
+    lines.append(
+        f"\nToday settled: ✅ {day_counts.get('won', 0)} won · "
+        f"❌ {day_counts.get('lost', 0)} lost · "
+        f"➖ {day_counts.get('void', 0)} void · "
+        f"⏳ {day_counts.get('pending', 0)} pending")
+    return "\n".join(lines)
+
+
+def format_result(sel: dict) -> str:
+    """Push notification for a settled pick: live won/lost update."""
+    emo = {"won": "✅ Bet WON", "lost": "❌ Bet LOST", "void": "➖ Bet VOID"}.get(
+        sel["status"], "❔ Bet UPDATE")
+    badge = TIER_EMOJI.get(sel["tier"], "⚪")
+    return (
+        f"{emo} {badge}\n"
+        f"{sel['match_label']} — {sel['market_type']}: "
+        f"{sel['outcome']} @ {sel['odds_decimal']}"
+    )
