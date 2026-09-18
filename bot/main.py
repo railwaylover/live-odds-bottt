@@ -12,6 +12,10 @@ from .store import Store
 
 logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s %(name)s %(levelname)s %(message)s")
+# Silence chatty HTTP loggers: httpx logs full request URLs, which would
+# leak the bot token into deployment logs. Never log secrets.
+for noisy in ("httpx", "httpcore", "h11", "telegram", "apscheduler"):
+    logging.getLogger(noisy).setLevel(logging.WARNING)
 log = logging.getLogger("live-odds-bot")
 
 
